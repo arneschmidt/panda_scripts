@@ -137,8 +137,8 @@ def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only):
             if is_background is False:
                 complete_patch_df = pd.concat([complete_patch_df, patch_df], ignore_index=True)
                 if not dataframes_only:
-                    cv2.imwrite(os.path.join(output_dir,'patches', name), patch)
-                    cv2.imwrite(os.path.join(output_dir, 'masks', name), patch_mask*50)
+                    skimage.io.imsave(os.path.join(output_dir,'patches', name), patch)
+                    skimage.io.imsave(os.path.join(output_dir, 'masks', name), patch_mask*50, check_contrast=False)
 
     return complete_patch_df
 
@@ -185,6 +185,7 @@ def main(args):
         if len(filtered_wsi) > 0:
             print('The following WSI have been filtered out completely because of whiteness or blur:')
             print(filtered_wsi)
+    copy2("artifacts/README.txt", os.path.join(args.output_dir))
 
 
 if __name__ == "__main__":
