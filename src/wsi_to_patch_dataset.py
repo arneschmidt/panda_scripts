@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import random
+import os
+import multiprocessing
 
 def contains_tissue(image):
     colour_threshold = 200
@@ -96,17 +98,23 @@ def create_patch_df_row(patch_mask, wsi_df_row, patch_name):
     return patch_df, is_background
 
 def read_wsi_and_mask(args, wsi_name, wsi_df):
+    wsi = None
+    mask = None
     wsi_path = os.path.join(args.data_dir, 'train_images', wsi_name + '.tiff')
 
     # wsi = cv2.imread(wsi_path)
-    mask = None
     wsi_df_row = wsi_df[wsi_df['image_id'] == wsi_name]
-    wsi = skimage.io.MultiImage(wsi_path)[0]
-
-    assert len(wsi_df_row) == 1
-    # if wsi_df_row['Gleason_primary'].array[0] != '0':
-    mask_path = os.path.join(args.data_dir, 'train_label_masks', wsi_name + '_mask.tiff')
-    mask = skimage.io.MultiImage(mask_path)[0]
+    wsi_tiff = skimage.io.MultiImage(wsi_path)
+    if len(wsi_tiff) == 1:
+        wsi = wsi_tiff[0]
+        assert len(wsi_df_row) == 1
+        # if wsi_df_row['Gleason_primary'].array[0] != '0':
+        mask_path = os.path.join(args.data_dir, 'train_label_masks', wsi_name + '_mask.tiff')
+        mask = skimage.io.MultiImage(mask_path)[0]
+    elif len(wsi_tiff) == 0:
+        raise Warning('WSI tiff is empty: ' + wsi_name)
+    else:
+        raise Warning('WSI ' + wsi_name + ' has an unexpected number of slice: ' + str(len(wsi_tiff)))
 
     return wsi, mask, wsi_df_row
 
@@ -117,30 +125,32 @@ def calc_num_patches(wsi, resolution):
     return num_patches_per_row, num_patches_per_column
 
 
-def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only):
+def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only, index, return_dict):
+    print('Slice WSI ' + wsi_name)
     wsi, mask, wsi_df_row = read_wsi_and_mask(args, wsi_name, wsi_df)
 
     resolution = args.patch_resolution
     num_patches_per_row, num_patches_per_column = calc_num_patches(wsi, resolution)
 
     complete_patch_df = init_patch_df()
-    for row in range(num_patches_per_row):
-        for column in range(num_patches_per_column):
+    if wsi is not None:
+        for row in range(num_patches_per_row):
+            for column in range(num_patches_per_column):
 
-            start_y = int(row*(resolution/2))
-            start_x = int(column*(resolution/2))
-            patch = wsi[start_y:start_y+resolution, start_x:start_x+resolution]
-            patch_mask = mask[start_y:start_y+resolution, start_x:start_x+resolution]
+                start_y = int(row*(resolution/2))
+                start_x = int(column*(resolution/2))
+                patch = wsi[start_y:start_y+resolution, start_x:start_x+resolution]
+                patch_mask = mask[start_y:start_y+resolution, start_x:start_x+resolution]
 
-            name = wsi_name + '_' + str(row) + '_' + str(column) + '.jpg'
-            patch_df, is_background = create_patch_df_row(patch_mask, wsi_df_row, name)
-            if is_background is False:
-                complete_patch_df = pd.concat([complete_patch_df, patch_df], ignore_index=True)
-                if not dataframes_only:
-                    skimage.io.imsave(os.path.join(output_dir,'images', name), patch)
-                    skimage.io.imsave(os.path.join(output_dir, 'masks', name), patch_mask*50, check_contrast=False)
+                name = wsi_name + '_' + str(row) + '_' + str(column) + '.jpg'
+                patch_df, is_background = create_patch_df_row(patch_mask, wsi_df_row, name)
+                if is_background is False:
+                    complete_patch_df = pd.concat([complete_patch_df, patch_df], ignore_index=True)
+                    if not dataframes_only:
+                        skimage.io.imsave(os.path.join(output_dir,'images', name), patch)
+                        skimage.io.imsave(os.path.join(output_dir, 'masks', name), patch_mask*50, check_contrast=False)
 
-    return complete_patch_df
+    return_dict[index] = complete_patch_df
 
 
 def main(args):
@@ -152,7 +162,7 @@ def main(args):
     for mode in modes:
         print('Split: ' + mode)
         mode_wsi_df = wsi_df[wsi_df['Partition']==mode]
-        wsi_list = mode_wsi_df['image_id']
+        wsi_list = mode_wsi_df['image_id'].array
 
         if args.number_wsi != 'all' and mode =='train':
             random.seed(42)
@@ -170,16 +180,33 @@ def main(args):
         df = init_patch_df(args.existing_patch_df)
 
         filtered_wsi = []
-        for wsi_name in wsi_list:
-            print('Slice WSI ' + wsi_name)
+        mp = args.multiprocesses
 
-            patch_df = slice_image(args, wsi_name, wsi_df, args.output_dir, args.dataframes_only)
+        for i in range(0, len(wsi_list), mp):
+            print(' Spawn new processes')
+            print('Working on index ' +str(i) + ' of ' + str(len(wsi_list)))
+            manager = multiprocessing.Manager()
+            return_dict = manager.dict()
+            processes = []
+            for j in range(mp):
+                index = i+j
+                if index == len(wsi_list):
+                    break
+                else:
+                    wsi_name = wsi_list[index]
+                    p = multiprocessing.Process(target=slice_image, args=(args, wsi_name, wsi_df, args.output_dir, args.dataframes_only, index, return_dict))
+                    processes.append(p)
+                    p.start()
+                    # patch_df = slice_image(args, wsi_name, wsi_df, args.output_dir, args.dataframes_only, index, return_dict)
+            for p in processes:
+                p.join()
+            for index in return_dict:
+                patch_df = return_dict[index]
+                if len(patch_df)==0:
+                    print('All patches of the WSI have been filtered out. WSI:' + str(wsi_name))
+                    filtered_wsi.append(wsi_name)
 
-            if len(patch_df)==0:
-                print('All patches of the WSI have been filtered out. WSI:' + str(wsi_name))
-                filtered_wsi.append(wsi_name)
-
-            df = pd.concat([df, patch_df])
+                df = pd.concat([df, patch_df])
         df.to_csv(os.path.join(args.output_dir, mode+'_patches.csv'), index=False)
 
         if len(filtered_wsi) > 0:
@@ -201,6 +228,7 @@ if __name__ == "__main__":
     # parser.add_argument("--output_dir", "-o", type=str, default="/home/arne/datasets/Panda/Panda_patches")
     parser.add_argument("--number_wsi", "-n", type=str, default="all")
     parser.add_argument("--dataframes_only", "-do", action='store_true')
+    parser.add_argument("--multiprocesses", "-mp", type=int, default=10)
 
     parser.add_argument("--patch_overlap", "-po", action='store_true')
     parser.add_argument("--patch_resolution", "-pr", type=int, default=512)
