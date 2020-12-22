@@ -137,7 +137,7 @@ def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only):
             if is_background is False:
                 complete_patch_df = pd.concat([complete_patch_df, patch_df], ignore_index=True)
                 if not dataframes_only:
-                    skimage.io.imsave(os.path.join(output_dir,'patches', name), patch)
+                    skimage.io.imsave(os.path.join(output_dir,'images', name), patch)
                     skimage.io.imsave(os.path.join(output_dir, 'masks', name), patch_mask*50, check_contrast=False)
 
     return complete_patch_df
