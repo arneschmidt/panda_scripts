@@ -190,12 +190,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", "-dd", type=str, default="/home/arne/datasets/Panda")
-    parser.add_argument("--wsi_dataframe", "-wd", type=str, default="./artifacts/train_dummy.csv")
+    parser.add_argument("--data_dir", "-dd", type=str, default="/data/BasesDeDatos/Panda")
+    parser.add_argument("--wsi_dataframe", "-wd", type=str, default="./artifacts/train.csv")
     parser.add_argument("--wsi_list", "-wl", type=str, default="all")
     parser.add_argument("--existing_patch_df", "-ep", type=str, default="None")
 
-    parser.add_argument("--output_dir", "-o", type=str, default="./output/")
+    parser.add_argument("--output_dir", "-o", type=str, default="/data/BasesDeDatos/Panda")
     parser.add_argument("--number_wsi", "-n", type=str, default="all")
     parser.add_argument("--dataframes_only", "-do", action='store_true')
 
