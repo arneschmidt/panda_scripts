@@ -159,7 +159,7 @@ def main(args):
             wsi_list = random.sample(wsi_list, int(args.number_wsi))
 
         number_of_wsi = len(wsi_list)
-        output_patch_dir = os.path.join(args.output_dir, 'patches')
+        output_patch_dir = os.path.join(args.output_dir, 'images')
         output_mask_dir = os.path.join(args.output_dir, 'masks')
         print('number_of_wsi  ', number_of_wsi)
 
