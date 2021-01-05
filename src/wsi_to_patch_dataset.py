@@ -3,6 +3,7 @@ import glob
 import argparse
 import os
 import skimage.io
+import skimage.transform
 from shutil import copy2
 import numpy as np
 import pandas as pd
@@ -128,7 +129,11 @@ def calc_num_patches(wsi, resolution):
 def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only, index, return_dict):
     print('Slice WSI ' + wsi_name)
     wsi, mask, wsi_df_row = read_wsi_and_mask(args, wsi_name, wsi_df)
-
+    width = int(wsi.shape[1] * args.resize_factor)
+    height = int(wsi.shape[0] * args.resize_factor)
+    dim = (width, height)
+    wsi = cv2.resize(wsi, dim, interpolation=cv2.INTER_AREA)
+    mask = cv2.resize(mask, dim, interpolation=cv2.INTER_AREA)
     resolution = args.patch_resolution
     num_patches_per_row, num_patches_per_column = calc_num_patches(wsi, resolution)
 
@@ -147,6 +152,8 @@ def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only, index, retu
                 if is_background is False:
                     complete_patch_df = pd.concat([complete_patch_df, patch_df], ignore_index=True)
                     if not dataframes_only:
+                        # patch = skimage.transform.rescale(patch, scale=0.5, multichannel=True, anti_aliasing=True)
+                        # patch_mask = skimage.transform.rescale(patch_mask, scale=0.5, multichannel=True, anti_aliasing=True)
                         skimage.io.imsave(os.path.join(output_dir,'images', name), patch)
                         skimage.io.imsave(os.path.join(output_dir, 'masks', name), patch_mask*50, check_contrast=False)
 
@@ -220,18 +227,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", "-dd", type=str, default="/data/BasesDeDatos/Panda")
     # parser.add_argument("--data_dir", "-dd", type=str, default="/home/arne/datasets/Panda")
-    parser.add_argument("--wsi_dataframe", "-wd", type=str, default="./artifacts/train.csv")
+    parser.add_argument("--wsi_dataframe", "-wd", type=str, default="./artifacts/train_dummy.csv")
     parser.add_argument("--wsi_list", "-wl", type=str, default="all")
     parser.add_argument("--existing_patch_df", "-ep", type=str, default="None")
 
-    parser.add_argument("--output_dir", "-o", type=str, default="/data/BasesDeDatos/Panda/Panda_patches")
-    # parser.add_argument("--output_dir", "-o", type=str, default="/home/arne/datasets/Panda/Panda_patches")
+    parser.add_argument("--output_dir", "-o", type=str, default="/data/BasesDeDatos/Panda/Panda_patches_resized")
+    # parser.add_argument("--output_dir", "-o", type=str, default="/home/arne/datasets/Panda/Panda_patches_resized")
     parser.add_argument("--number_wsi", "-n", type=str, default="all")
     parser.add_argument("--dataframes_only", "-do", action='store_true')
     parser.add_argument("--multiprocesses", "-mp", type=int, default=10)
 
     parser.add_argument("--patch_overlap", "-po", action='store_true')
     parser.add_argument("--patch_resolution", "-pr", type=int, default=512)
+    parser.add_argument("--resize_factor", "-rf", type=float, default=0.5)
     parser.add_argument("--debug", "-d", action='store_true')
     args = parser.parse_args()
     print('Arguments:')
