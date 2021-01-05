@@ -235,7 +235,7 @@ if __name__ == "__main__":
     # parser.add_argument("--output_dir", "-o", type=str, default="/home/arne/datasets/Panda/Panda_patches_resized")
     parser.add_argument("--number_wsi", "-n", type=str, default="all")
     parser.add_argument("--dataframes_only", "-do", action='store_true')
-    parser.add_argument("--multiprocesses", "-mp", type=int, default=10)
+    parser.add_argument("--multiprocesses", "-mp", type=int, default=20)
 
     parser.add_argument("--patch_overlap", "-po", action='store_true')
     parser.add_argument("--patch_resolution", "-pr", type=int, default=512)
