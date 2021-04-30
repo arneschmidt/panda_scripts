@@ -183,6 +183,8 @@ def main(args):
     wsi_df = pd.read_csv(args.wsi_dataframe)
     wsi_df['Gleason_primary'] = wsi_df['gleason_score'].str.split('+').str[0]
     wsi_df['Gleason_secondary'] = wsi_df['gleason_score'].str.split('+').str[1]
+    if args.radboud_only:
+        wsi_df = wsi_df.loc[wsi_df['data_provider'] == 'radboud']
 
     for mode in modes:
         print('Split: ' + mode)
@@ -238,7 +240,8 @@ def main(args):
             print('The following WSI have been filtered out completely because of whiteness or blur:')
             print(filtered_wsi)
     copy2("artifacts/README.txt", os.path.join(args.output_dir))
-    copy2("artifacts/train.csv", os.path.join(args.output_dir, 'wsi_labels.csv'))
+    wsi_df.to_csv(os.path.join(args.output_dir, 'wsi_labels.csv'))
+    # copy2("artifacts/train.csv", os.path.join(args.output_dir, 'wsi_labels.csv'))
 
 
 if __name__ == "__main__":
@@ -247,6 +250,7 @@ if __name__ == "__main__":
     # parser.add_argument("--data_dir", "-dd", type=str, default="/home/arne/datasets/Panda")
     parser.add_argument("--wsi_dataframe", "-wd", type=str, default="./artifacts/train.csv")
     parser.add_argument("--wsi_list", "-wl", type=str, default="all")
+    parser.add_argument("--radboud_only", "-ro", action='store_true')
     parser.add_argument("--existing_patch_df", "-ep", type=str, default="None")
     parser.add_argument("--ambiguous_as_unlabeled", "-au", action='store_true')
 
@@ -254,7 +258,7 @@ if __name__ == "__main__":
     # parser.add_argument("--output_dir", "-o", type=str, default="/home/arne/datasets/Panda/Panda_patches_with_unlabeled")
     parser.add_argument("--number_wsi", "-n", type=str, default="all")
     parser.add_argument("--dataframes_only", "-do", action='store_true')
-    parser.add_argument("--multiprocesses", "-mp", type=int, default=20)
+    parser.add_argument("--multiprocesses", "-mp", type=int, default=10)
 
     parser.add_argument("--patch_overlap", "-po", action='store_true')
     parser.add_argument("--patch_resolution", "-pr", type=int, default=512)
