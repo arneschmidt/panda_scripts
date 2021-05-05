@@ -4,6 +4,7 @@ import argparse
 import os
 import skimage.io
 import skimage.transform
+import yaml
 from shutil import copy2
 import numpy as np
 import pandas as pd
@@ -11,33 +12,6 @@ import matplotlib.pyplot as plt
 import random
 import os
 import multiprocessing
-
-def contains_tissue(image):
-    colour_threshold = 200
-    percentage_white_threshold = 0.8
-    blurr_threshold = 70
-
-    white = (255, 255, 255)
-    grey = (colour_threshold, colour_threshold, colour_threshold)
-    resolution = (512, 512)
-
-    mask = cv2.inRange(image, grey, white)
-    white_pixels = np.sum(mask==255)
-    not_white = (white_pixels / (resolution[0] * resolution[1]) < percentage_white_threshold)
-
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    fm = cv2.Laplacian(gray, cv2.CV_64F).var()
-    not_blurry = fm > blurr_threshold
-
-    # copy file if percentage of white is below threshold
-    if not_white and not_blurry:
-        return True
-    else: # else only copy for debug
-        # if not not_white:
-        #     print('Patch white!')
-        # elif not not_blurry:
-        #     print('Patch blurry!')
-        return False
 
 def init_patch_df(existing_patch_df='None'):
     if existing_patch_df == 'None':
@@ -137,10 +111,14 @@ def read_wsi_and_mask(args, wsi_name, wsi_df):
 
     return wsi, mask, wsi_df_row
 
-def calc_num_patches(wsi, resolution):
+def calc_num_patches(wsi, resolution, overlap):
     h, w, _ = wsi.shape
-    num_patches_per_row = int(2*np.floor((h/resolution)) - 1)
-    num_patches_per_column = int(2*np.floor((w/resolution)) - 1)
+    if overlap:
+        num_patches_per_row = int(2*np.floor((h/resolution)) - 1)
+        num_patches_per_column = int(2*np.floor((w/resolution)) - 1)
+    else:
+        num_patches_per_row = int(np.floor((h/resolution)) - 1)
+        num_patches_per_column = int(np.floor((w/resolution)) - 1)
     return num_patches_per_row, num_patches_per_column
 
 
@@ -150,18 +128,22 @@ def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only, index, retu
     width = int(wsi.shape[1] * args.resize_factor)
     height = int(wsi.shape[0] * args.resize_factor)
     dim = (width, height)
-    wsi = cv2.resize(wsi, dim, interpolation=cv2.INTER_AREA)
-    mask = cv2.resize(mask, dim, interpolation=cv2.INTER_AREA)
+    wsi = cv2.resize(wsi, dim, interpolation=cv2.INTER_CUBIC)
+    mask = cv2.resize(mask, dim, interpolation=cv2.INTER_CUBIC)
     resolution = args.patch_resolution
-    num_patches_per_row, num_patches_per_column = calc_num_patches(wsi, resolution)
+    overlap = args.patch_overlap
+    num_patches_per_row, num_patches_per_column = calc_num_patches(wsi, resolution, overlap)
 
     complete_patch_df = init_patch_df()
     if wsi is not None:
         for row in range(num_patches_per_row):
             for column in range(num_patches_per_column):
-
-                start_y = int(row*(resolution/2))
-                start_x = int(column*(resolution/2))
+                if overlap:
+                    start_y = int(row*(resolution/2))
+                    start_x = int(column*(resolution/2))
+                else:
+                    start_y = int(row * resolution)
+                    start_x = int(column * resolution)
                 patch = wsi[start_y:start_y+resolution, start_x:start_x+resolution]
                 patch_mask = mask[start_y:start_y+resolution, start_x:start_x+resolution]
 
@@ -239,9 +221,14 @@ def main(args):
         if len(filtered_wsi) > 0:
             print('The following WSI have been filtered out completely because of whiteness or blur:')
             print(filtered_wsi)
+    code_dir = os.path.join(args.output_dir, 'code')
+    os.makedirs(code_dir, exist_ok=True)
+    with open(os.path.join(code_dir, 'config_used.yaml'), 'w') as outfile:
+        yaml.dump(args, outfile, default_flow_style=False)
     copy2("artifacts/README.txt", os.path.join(args.output_dir))
+    copy2("src/wsi_to_patch_dataset.py", args.output_dir)
+    copy2("environment.yaml", args.output_dir)
     wsi_df.to_csv(os.path.join(args.output_dir, 'wsi_labels.csv'))
-    # copy2("artifacts/train.csv", os.path.join(args.output_dir, 'wsi_labels.csv'))
 
 
 if __name__ == "__main__":
