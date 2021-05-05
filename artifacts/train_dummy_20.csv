@@ -2,7 +2,7 @@ image_id,data_provider,isup_grade,gleason_score,Partition
 00928370e2dfeb8a507667ef1d4efcbb,radboud,5,4+5,train
 00951a7fad040bf7e90f32e81fc0746f,radboud,1,3+3,train
 00a26aaa82c959624d90dfb69fcf259c,radboud,4,4+4,train
-00a76bfbec239fd9f465d6581806ff42,karolinska,0,0+0,train
+130019276ea41cbc9c01147481b1d6db,radboud,5,4+5,test
 00a7fb880dc12c5de82df39b30533da9,radboud,3,4+3,train
 00a97615a51ba4c475bdec8505623bf9,karolinska,4,4+4,train
 00bbc1482301d16de3ff63238cfd0b34,radboud,2,3+4,train
@@ -10,13 +10,13 @@ image_id,data_provider,isup_grade,gleason_score,Partition
 00c46b336b5b06423fcdec1b4d5bee06,radboud,1,3+3,test
 00c52cb4db1c7a5811a8f070a910c038,radboud,5,4+5,val
 00ca0c23961b5510be46c917be11c43e,radboud,5,5+4,train
-00d7ec94436e3a1416a3b302914957d3,karolinska,2,3+4,train
+1521d8add6039d68060e919270448018,radboud,1,3+3,val
 00d8a8c04886379e266406fdeff81c45,radboud,5,4+5,train
 00e6511435645e50673991768a713c66,radboud,1,3+3,train
 00ed4dbf9af6cc102e04cc9a42b313e2,radboud,1,3+3,train
-00ee879798782aca1248baa9132d7307,karolinska,1,3+3,train
+02a3870e56dbcb6afd73546af54a8457,radboud,0,0+0,train
 00f6ea010b008e7b3635910a13b165a5,radboud,1,3+3,train
-00fbee5161d8cc715b3fe69e16cdf147,karolinska,1,3+3,train
+026081211406349c85c3e5b4fc4b6ff0,radboud,0,0+0,train
 01642d24ac5520681d6a20f6c42dc4fe,radboud,0,0+0,test
 010670e9572e67e5a7e00fb791a343ef,radboud,5,4+5,val
 010dea54bfd0a4a1eb1c0719949bb4a4,radboud,5,5+4,train
