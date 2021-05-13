@@ -13,11 +13,11 @@ test_samples = 1000
 val_samples = 30
 
 train_val, test = train_test_split(wsi_df, test_size=test_samples, random_state=seed)
-train, val = train_test_split(wsi_df, test_size=val_samples, random_state=seed)
+train, val = train_test_split(train_val, test_size=val_samples, random_state=seed)
 
-train.loc['Partition'] = 'train'
-val.loc['Partition'] = 'val'
-test.loc['Partition'] = 'test'
+train['Partition'] = 'train'
+val['Partition'] = 'val'
+test['Partition'] = 'test'
 
 print(val['gleason_score'])
 
