@@ -20,16 +20,24 @@ def init_patch_df(existing_patch_df='None'):
         df = pd.read_excel(existing_patch_df)
     return df
 
-def check_max_class(patch_mask, data_provider, ambiguous_as_unlabeled):
+def check_max_class(patch_mask, data_provider, ambiguous_as_unlabeled, center_determines_class):
     threshold_non_cancerous = 0.95
     label = None
+
     assert np.all(patch_mask[:,:,1] == 0) # check if other channels always zero
     assert np.all(patch_mask[:,:,2] == 0) # check if other channels always zero
     patch_mask = patch_mask[:,:,0]
+
+    # cut out middle part of the patch mask
+    if center_determines_class:
+        res = patch_mask.shape[0]
+        border = int(res/4)
+        patch_mask = patch_mask[border:res-border, border:res-border]
+
+
     num_pixels = patch_mask.size
     num_background = np.count_nonzero(patch_mask == 0)
-
-    if num_background > num_pixels/2:
+    if num_background > num_pixels*0.95:
         label = 'background'
     elif data_provider=='karolinska':
         num_nc = np.count_nonzero(patch_mask == 1)
@@ -63,7 +71,7 @@ def check_max_class(patch_mask, data_provider, ambiguous_as_unlabeled):
             else:
                 label = 'unlabeled'
         else:
-            if num_nc + num_background> threshold_non_cancerous*num_pixels:
+            if num_nc + num_background > threshold_non_cancerous*num_pixels:
                 label = 'NC'
             elif num_gg_3 == num_max:
                 label = 'G3'
@@ -75,11 +83,11 @@ def check_max_class(patch_mask, data_provider, ambiguous_as_unlabeled):
 
     return label
 
-def create_patch_df_row(patch_mask, wsi_df_row, patch_name, ambiguous_as_unlabeled):
+def create_patch_df_row(patch_mask, wsi_df_row, patch_name, ambiguous_as_unlabeled, center_determines_class):
     is_background = False
     patch_df = None
 
-    label = check_max_class(patch_mask, wsi_df_row['data_provider'].array[0], ambiguous_as_unlabeled)
+    label = check_max_class(patch_mask, wsi_df_row['data_provider'].array[0], ambiguous_as_unlabeled,center_determines_class)
     if label == 'background':
         is_background = True
     else:
@@ -148,7 +156,7 @@ def slice_image(args, wsi_name, wsi_df, output_dir, dataframes_only, index, retu
                 patch_mask = mask[start_y:start_y+resolution, start_x:start_x+resolution]
 
                 name = wsi_name + '_' + str(row) + '_' + str(column) + '.jpg'
-                patch_df, is_background = create_patch_df_row(patch_mask, wsi_df_row, name, args.ambiguous_as_unlabeled)
+                patch_df, is_background = create_patch_df_row(patch_mask, wsi_df_row, name, args.ambiguous_as_unlabeled, args.center_determines_class)
                 if is_background is False:
                     complete_patch_df = pd.concat([complete_patch_df, patch_df], ignore_index=True)
                     if not dataframes_only:
@@ -240,13 +248,11 @@ if __name__ == "__main__":
     parser.add_argument("--radboud_only", "-ro", action='store_true')
     parser.add_argument("--existing_patch_df", "-ep", type=str, default="None")
     parser.add_argument("--ambiguous_as_unlabeled", "-au", action='store_true')
-
+    parser.add_argument("--center_determines_class", "-cdc", action='store_true')
     parser.add_argument("--output_dir", "-o", type=str, default="/data/BasesDeDatos/Panda/Panda_patches_resized")
-    # parser.add_argument("--output_dir", "-o", type=str, default="/home/arne/datasets/Panda/Panda_patches_with_unlabeled")
     parser.add_argument("--number_wsi", "-n", type=str, default="all")
     parser.add_argument("--dataframes_only", "-do", action='store_true')
     parser.add_argument("--multiprocesses", "-mp", type=int, default=10)
-
     parser.add_argument("--patch_overlap", "-po", action='store_true')
     parser.add_argument("--patch_resolution", "-pr", type=int, default=512)
     parser.add_argument("--resize_factor", "-rf", type=float, default=0.5)
