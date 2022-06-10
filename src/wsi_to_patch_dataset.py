@@ -241,7 +241,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", "-dd", type=str, default="/data/BasesDeDatos/Panda")
+    parser.add_argument("--data_dir", "-dd", type=str, default="/data/BasesDeDatos/Panda/original")
     # parser.add_argument("--data_dir", "-dd", type=str, default="/home/arne/datasets/Panda")
     parser.add_argument("--wsi_dataframe", "-wd", type=str, default="./artifacts/train.csv")
     parser.add_argument("--wsi_list", "-wl", type=str, default="all")
